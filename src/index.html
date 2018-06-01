@@ -3,8 +3,49 @@
   <head>
     <meta charset="utf-8">
     <title>Webpack ES6 Boilerplate</title>
+    <style>
+      .red {
+        background-color: 'red';
+      }
+    </style>
   </head>
   <body>
-    <div class="hello" id="root"></div>
+    <p class="hello" id="root"></p>
+    <p>
+      <label for="REQUESTABLE_PERMISSIONS">Requestable Permissions:</label>
+      <select id="REQUESTABLE_PERMISSIONS" multiple size='7'>
+        <option value="email">email</option>
+        <option value="user_age_range">user_age_range</option>
+        <option value="user_birthday">user_birthday</option>
+        <option value="user_friends">user_friends</option>
+        <option value="user_likes">user_likes</option>
+        <option value="manage_pages">manage_pages</option>
+        <option value="publish_pages">publish_pages</option>
+      </select>
+    </p>
+
+    <p>
+      <button onclick="window.loginWithSelected(getSelected(document.getElementById('REQUESTABLE_PERMISSIONS')))">
+        Login with Selected Scopes
+      </button>
+    </p>
+    <p>
+      <button onclick="window.getUserLikes()">Get User Likes</button>
+      <button onclick="window.getPages()">Get Pages</button>
+    </p>
+    <p>
+      <button onclick="window.checkFBPermissions()">Check FB Permissions</button>
+      <button onclick="window.revokeAllPermissions()" class="red">Revoke All Permissions</button>
+    </p>
+
+    <p>
+      <select id="PERMISSIONS">
+        <option value="">--- SELECT PERMISSION ---</option>
+      </select>
+      <button onclick="window.revokePermission(document.getElementById('PERMISSIONS').value)" class="red">Revoke Permissions</button>
+    </p>
+
+    <table id="PERMISSIONS_TABLE" style="width: 300px">
+    </table>
   </body>
 </html>
