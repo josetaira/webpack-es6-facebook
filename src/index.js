@@ -1,8 +1,11 @@
 import sayHello from './hello';
 import './index.scss';
 import fbSDK from 'load-fb-sdk';
+import axios from 'axios';
 
 document.getElementById('root').innerHTML = sayHello();
+
+const FB_APP_SECRET = '{app-secret}';
 
 const fbInitOpts = {
   appId      : '{client-id}',
@@ -17,8 +20,11 @@ let _FB = null;
 window.__LOAD_FB_SDK = fbInitOpts;
 
 let auth = {
-  resp: null
+  resp: null,
+  long_lived: null,
+  user: null
 };
+
 window.auth = auth;
 
 fbSDK(function (err, FB) {
@@ -26,29 +32,32 @@ fbSDK(function (err, FB) {
     return console.log(err);
   }
   _FB = FB;
-  _FB.getLoginStatus((res) => {
+  /*_FB.getLoginStatus((res) => {
     auth.resp = res.authResponse;
     window.checkFBPermissions();
+  });*/
+
+  _FB.api('/me', {
+    access_token: getLongLivedAccessToken(),
+    fields: 'id'
+  }, (resp) => {
+    console.info(resp);
+    auth.user = { access_token: getLongLivedAccessToken(), userId: resp.id };
+    window.checkFBPermissions();
   });
+
 });
 
-window.onClickFBButton = () => {
-  _FB.login(defaultOnLogin);
-};
-
-window.tryPost = () => {
-
-};
-
-window.loginWithManagePages = () => {
-  _FB.login(defaultOnLogin, {
-    scope: 'manage_pages'
-  });
-};
-
-window.loginWithPublishPages = () => {
-  _FB.login(defaultOnLogin, {
-    scope: 'publish_pages'
+window.exchangeForLongLived = (cb) => {
+  _FB.api('/oauth/access_token', 'get', {
+    grant_type: 'fb_exchange_token',
+    client_id: fbInitOpts.appId,
+    client_secret: FB_APP_SECRET,
+    fb_exchange_token: (auth.resp && auth.resp.accessToken) || auth.user.access_token,
+  }, (resp) => {
+    console.info('Exchange For Long Lived', resp);
+    localStorage.long_lived = JSON.stringify(resp);
+    auth.user.access_token = resp.access_token;
   });
 };
 
@@ -71,14 +80,27 @@ window.loginWithSelected = (selected) => {
 
 const defaultOnLogin = (resp) => {
   auth.resp = resp.authResponse;
-  window.checkFBPermissions();
+  if (!auth.user) {
+    auth.user = {}
+  }
+  console.info('defaultOnLogin', resp);
+  auth.user.userId = resp.authResponse.userID;
+  window.exchangeForLongLived(window.checkFBPermissions);
+};
+
+window.getLongLivedAccessToken = () => {
+  if (localStorage.long_lived) {
+    return JSON.parse(localStorage.long_lived).access_token;
+  }
 };
 
 window.checkFBPermissions = (oResp, cb) => {
-  const { resp } = auth;
-  if (resp) {
-    const { userID } = resp;
-    _FB.api(`${userID}/permissions`, (resp) => {
+  const { user } = auth;
+  if (user) {
+    const { userId } = user;
+    _FB.api(`${userId}/permissions`, {
+      access_token: getLongLivedAccessToken()
+    }, (resp) => {
       const options = ['<option value="">--- SELECT PERMISSION ---</option>'];
       const tableRows = [];
       if (resp.data) {
@@ -101,22 +123,30 @@ window.checkFBPermissions = (oResp, cb) => {
 };
 
 window.revokeAllPermissions = () => {
-  const { resp } = auth;
-  if (resp) {
-    const { userID } = resp;
-    _FB.api(`${userID}/permissions`, 'delete', (resp) => {
+  const { user } = auth;
+  if (user) {
+    const { userId } = user;
+    _FB.api(`${userId}/permissions`, 'delete', {
+      access_token: getLongLivedAccessToken()
+    }, (resp) => {
       console.info(resp);
-      window.checkFBPermissions(resp, () => { alert('Permissions Revoked'); });
+      if(resp.error) {
+        console.error(resp.error);
+      } else {
+        window.checkFBPermissions(resp, () => { alert('Permissions Revoked'); });
+      }
     });
   }
 };
 
 window.revokePermission = (permission) => {
   if (!permission) { return; }
-  const { resp } = auth;
-  if (resp) {
-    const { userID } = resp;
-    _FB.api(`${userID}/permissions/${permission}`, 'delete', (resp) => {
+  const { user } = auth;
+  if (user) {
+    const { userId } = user;
+    _FB.api(`${userId}/permissions/${permission}`, 'delete', {
+      access_token: getLongLivedAccessToken()
+    }, (resp) => {
       console.info(resp);
       console.info(`Permission ${permission} revoked`);
       window.checkFBPermissions();
@@ -125,20 +155,24 @@ window.revokePermission = (permission) => {
 };
 
 window.getUserLikes = () => {
-  const { resp } = auth;
-  if (resp) {
-    const { userID } = resp;
-    _FB.api(`${userID}/likes`, (resp) => {
+  const { user } = auth;
+  if (user) {
+    const { userId } = user;
+    _FB.api(`${userId}/likes`, {
+      access_token: getLongLivedAccessToken()
+    }, (resp) => {
       console.info(resp);
     });
   }
 };
 
 window.getPages = () => {
-  const { resp } = auth;
-  if (resp) {
-    const { userID } = resp;
-    _FB.api('me/accounts', (resp) => {
+  const { user } = auth;
+  if (user) {
+    const { userId } = user;
+    _FB.api('me/accounts', {
+      access_token: getLongLivedAccessToken()
+    }, (resp) => {
       console.info(resp);
     });
   }
