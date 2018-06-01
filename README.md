@@ -1,16 +1,10 @@
 # Webpack ES6 boilerplate
 
-[![tests][tests]][tests-url]
-[![coverage][cover]][cover-url]
-
 Based on https://github.com/jluccisano/webpack-es6-boilerplate.git
 
 A minimalistic Facebook login test harness.
 
 ## Prerequisites
-
-[![node][node]][node-url]
-[![npm][npm]][npm-url]
 
 - [Node.js](http://es6-features.org)
 
